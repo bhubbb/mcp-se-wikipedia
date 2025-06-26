@@ -106,10 +106,15 @@ async def handle_search(arguments: dict[str, Any]) -> list[types.TextContent]:
         search_results = wikipedia.search(query, results=limit)
 
         if search_results:
+            # Metadata
             results.append(types.TextContent(
                 type="text",
-                text=f"# Wikipedia Search Results\n\n**Wikipedia Version:** Simple English\n**Query:** {query}\n\n**Results:**\n" +
-                     "\n".join([f"- {result}" for result in search_results])
+                text=f"# Search Metadata\n\n**Wikipedia Version:** Simple English\n**Query:** {query}\n**Results Count:** {len(search_results)}\n**Language Code:** simple"
+            ))
+            # Search Results
+            results.append(types.TextContent(
+                type="text",
+                text=f"# Search Results\n\n" + "\n".join([f"- {result}" for result in search_results])
             ))
         else:
             # Fallback to English Wikipedia
@@ -117,22 +122,27 @@ async def handle_search(arguments: dict[str, Any]) -> list[types.TextContent]:
             search_results = wikipedia.search(query, results=limit)
 
             if search_results:
+                # Metadata
                 results.append(types.TextContent(
                     type="text",
-                    text=f"# Wikipedia Search Results\n\n**Wikipedia Version:** English\n**Query:** {query}\n\n**Results:**\n" +
-                         "\n".join([f"- {result}" for result in search_results])
+                    text=f"# Search Metadata\n\n**Wikipedia Version:** English\n**Query:** {query}\n**Results Count:** {len(search_results)}\n**Language Code:** en\n**Note:** Simple English results not available"
+                ))
+                # Search Results
+                results.append(types.TextContent(
+                    type="text",
+                    text=f"# Search Results\n\n" + "\n".join([f"- {result}" for result in search_results])
                 ))
             else:
                 results.append(types.TextContent(
                     type="text",
-                    text=f"# Wikipedia Search Results\n\n**Wikipedia Version:** None (not found)\n**Query:** {query}\n\n**Results:** No results found in Simple English or English Wikipedia."
+                    text=f"# Search Metadata\n\n**Wikipedia Version:** None (not found)\n**Query:** {query}\n**Results Count:** 0\n**Language Code:** N/A\n**Error:** No results found in Simple English or English Wikipedia"
                 ))
 
     except Exception as e:
         logger.error(f"Search error: {e}")
         results.append(types.TextContent(
             type="text",
-            text=f"# Wikipedia Search Error\n\n**Wikipedia Version:** Error\n**Query:** {query}\n\n**Error:** {str(e)}"
+            text=f"# Search Error\n\n**Wikipedia Version:** Error\n**Query:** {query}\n**Language Code:** N/A\n**Error:** {str(e)}"
         ))
 
     return results
@@ -156,17 +166,33 @@ async def handle_page(arguments: dict[str, Any]) -> list[types.TextContent]:
 
             # Check if the page has reasonable content (not just a stub)
             if len(page.content) > 500:  # Arbitrary threshold for "good quality"
+                # Metadata
                 results.append(types.TextContent(
                     type="text",
-                    text=f"# {page.title}\n\n**Wikipedia Version:** Simple English\n**URL:** {page.url}\n\n**Summary:**\n{page.summary}\n\n**Full Content:**\n{page.content}"
+                    text=f"# Page Metadata\n\n**Title:** {page.title}\n**Wikipedia Version:** Simple English\n**Language Code:** simple\n**URL:** {page.url}\n**Content Length:** {len(page.content)} characters"
+                ))
+                # Summary
+                results.append(types.TextContent(
+                    type="text",
+                    text=f"# Page Summary\n\n{page.summary}"
+                ))
+                # Full Content
+                results.append(types.TextContent(
+                    type="text",
+                    text=f"# Page Content\n\n{page.content}"
                 ))
                 return results
         except wikipedia.exceptions.DisambiguationError as e:
             # Handle disambiguation by showing options
+            # Metadata
             results.append(types.TextContent(
                 type="text",
-                text=f"# Disambiguation Required\n\n**Wikipedia Version:** Simple English\n**Title:** {title}\n\n**Did you mean:**\n" +
-                     "\n".join([f"- {option}" for option in e.options[:10]])
+                text=f"# Disambiguation Metadata\n\n**Wikipedia Version:** Simple English\n**Language Code:** simple\n**Requested Title:** {title}\n**Options Count:** {len(e.options[:10])}"
+            ))
+            # Disambiguation Options
+            results.append(types.TextContent(
+                type="text",
+                text=f"# Disambiguation Options\n\n**Did you mean:**\n" + "\n".join([f"- {option}" for option in e.options[:10]])
             ))
             return results
         except wikipedia.exceptions.PageError:
@@ -181,27 +207,43 @@ async def handle_page(arguments: dict[str, Any]) -> list[types.TextContent]:
 
         try:
             page = wikipedia.page(title, auto_suggest=auto_suggest)
+            # Metadata
             results.append(types.TextContent(
                 type="text",
-                text=f"# {page.title}\n\n**Wikipedia Version:** English\n**URL:** {page.url}\n\n**Summary:**\n{page.summary}\n\n**Full Content:**\n{page.content}"
+                text=f"# Page Metadata\n\n**Title:** {page.title}\n**Wikipedia Version:** English\n**Language Code:** en\n**URL:** {page.url}\n**Content Length:** {len(page.content)} characters\n**Note:** Simple English version not available"
+            ))
+            # Summary
+            results.append(types.TextContent(
+                type="text",
+                text=f"# Page Summary\n\n{page.summary}"
+            ))
+            # Full Content
+            results.append(types.TextContent(
+                type="text",
+                text=f"# Page Content\n\n{page.content}"
             ))
         except wikipedia.exceptions.DisambiguationError as e:
+            # Metadata
             results.append(types.TextContent(
                 type="text",
-                text=f"# Disambiguation Required\n\n**Wikipedia Version:** English\n**Title:** {title}\n\n**Did you mean:**\n" +
-                     "\n".join([f"- {option}" for option in e.options[:10]])
+                text=f"# Disambiguation Metadata\n\n**Wikipedia Version:** English\n**Language Code:** en\n**Requested Title:** {title}\n**Options Count:** {len(e.options[:10])}\n**Note:** Simple English version not available"
+            ))
+            # Disambiguation Options
+            results.append(types.TextContent(
+                type="text",
+                text=f"# Disambiguation Options\n\n**Did you mean:**\n" + "\n".join([f"- {option}" for option in e.options[:10]])
             ))
         except wikipedia.exceptions.PageError:
             results.append(types.TextContent(
                 type="text",
-                text=f"# Page Not Found\n\n**Wikipedia Version:** None (not found)\n**Title:** {title}\n\n**Error:** Page does not exist in Simple English or English Wikipedia."
+                text=f"# Page Not Found\n\n**Wikipedia Version:** None (not found)\n**Language Code:** N/A\n**Requested Title:** {title}\n**Error:** Page does not exist in Simple English or English Wikipedia"
             ))
 
     except Exception as e:
         logger.error(f"Page retrieval error: {e}")
         results.append(types.TextContent(
             type="text",
-            text=f"# Wikipedia Page Error\n\n**Wikipedia Version:** Error\n**Title:** {title}\n\n**Error:** {str(e)}"
+            text=f"# Page Error\n\n**Wikipedia Version:** Error\n**Language Code:** N/A\n**Requested Title:** {title}\n**Error:** {str(e)}"
         ))
 
     return results
