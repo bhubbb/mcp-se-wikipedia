@@ -41,7 +41,7 @@ This MCP server acts as a bridge between AI assistants and Wikipedia, specifical
 
 **Run directly with uvx:**
 ```bash
-uvx git+https://github.com/bhubbb/mcp-se-wikipedia mcp-se-wikipedia
+uvx git+https://github.com/bhubbb/mcp-se-wikipedia
 ```
 
 **Or install locally:**
@@ -67,7 +67,7 @@ Example configuration for Claude Desktop:
   "mcpServers": {
     "wikipedia-se": {
       "command": "uvx",
-      "args": ["git+https://github.com/bhubbb/mcp-se-wikipedia", "mcp-se-wikipedia"]
+      "args": ["git+https://github.com/bhubbb/mcp-se-wikipedia"]
     }
   }
 }
@@ -261,7 +261,7 @@ The server can be easily customized by modifying `main.py`:
 
 Test the server directly:
 ```bash
-uvx git+https://github.com/bhubbb/mcp-se-wikipedia mcp-se-wikipedia
+uvx git+https://github.com/bhubbb/mcp-se-wikipedia
 ```
 
 Or with local installation:
@@ -299,7 +299,3 @@ This is a simple, single-file implementation designed for clarity and ease of mo
 ## License
 
 This project uses the same license as its dependencies. The Wikipedia content accessed through this server is subject to Wikipedia's licensing terms.
-
----
-
-*This MCP server makes Wikipedia more accessible by prioritizing Simple English content while maintaining access to the full breadth of Wikipedia knowledge.*
