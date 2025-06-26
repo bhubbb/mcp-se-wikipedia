@@ -75,7 +75,7 @@ async def handle_list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="page",
+            name="content",
             description="Get the full content of a specific Wikipedia page. Tries Simple English first, falls back to English.",
             inputSchema={
                 "type": "object",
@@ -106,8 +106,8 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[types.T
         return await handle_search(arguments)
     elif name == "summary":
         return await handle_summary(arguments)
-    elif name == "page":
-        return await handle_page(arguments)
+    elif name == "content":
+        return await handle_content(arguments)
     else:
         raise ValueError(f"Unknown tool: {name}")
 
@@ -259,7 +259,7 @@ async def handle_summary(arguments: dict[str, Any]) -> list[types.TextContent]:
 
     return results
 
-async def handle_page(arguments: dict[str, Any]) -> list[types.TextContent]:
+async def handle_content(arguments: dict[str, Any]) -> list[types.TextContent]:
     """Handle Wikipedia page content requests."""
     title = arguments.get("title")
     auto_suggest = arguments.get("auto_suggest", True)
@@ -281,7 +281,7 @@ async def handle_page(arguments: dict[str, Any]) -> list[types.TextContent]:
                 # Metadata
                 results.append(types.TextContent(
                     type="text",
-                    text=f"# Page Metadata\n\n**Title:** {page.title}\n**Wikipedia Version:** Simple English\n**Language Code:** simple\n**URL:** {page.url}\n**Content Length:** {len(page.content)} characters"
+                    text=f"# Content Metadata\n\n**Title:** {page.title}\n**Wikipedia Version:** Simple English\n**Language Code:** simple\n**URL:** {page.url}\n**Content Length:** {len(page.content)} characters"
                 ))
                 # Full Content
                 results.append(types.TextContent(
@@ -317,7 +317,7 @@ async def handle_page(arguments: dict[str, Any]) -> list[types.TextContent]:
             # Metadata
             results.append(types.TextContent(
                 type="text",
-                text=f"# Page Metadata\n\n**Title:** {page.title}\n**Wikipedia Version:** English\n**Language Code:** en\n**URL:** {page.url}\n**Content Length:** {len(page.content)} characters\n**Note:** Simple English version not available"
+                text=f"# Content Metadata\n\n**Title:** {page.title}\n**Wikipedia Version:** English\n**Language Code:** en\n**URL:** {page.url}\n**Content Length:** {len(page.content)} characters\n**Note:** Simple English version not available"
             ))
             # Full Content
             results.append(types.TextContent(
@@ -338,14 +338,14 @@ async def handle_page(arguments: dict[str, Any]) -> list[types.TextContent]:
         except wikipedia.exceptions.PageError:
             results.append(types.TextContent(
                 type="text",
-                text=f"# Page Not Found\n\n**Wikipedia Version:** None (not found)\n**Language Code:** N/A\n**Requested Title:** {title}\n**Error:** Page does not exist in Simple English or English Wikipedia"
+                text=f"# Content Not Found\n\n**Wikipedia Version:** None (not found)\n**Language Code:** N/A\n**Requested Title:** {title}\n**Error:** Page does not exist in Simple English or English Wikipedia"
             ))
 
     except Exception as e:
-        logger.error(f"Page retrieval error: {e}")
+        logger.error(f"Content retrieval error: {e}")
         results.append(types.TextContent(
             type="text",
-            text=f"# Page Error\n\n**Wikipedia Version:** Error\n**Language Code:** N/A\n**Requested Title:** {title}\n**Error:** {str(e)}"
+            text=f"# Content Error\n\n**Wikipedia Version:** Error\n**Language Code:** N/A\n**Requested Title:** {title}\n**Error:** {str(e)}"
         ))
 
     return results
