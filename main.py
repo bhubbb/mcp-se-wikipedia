@@ -56,14 +56,33 @@ async def handle_list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="page",
-            description="Get the content of a specific Wikipedia page. Tries Simple English first, falls back to English.",
+            name="summary",
+            description="Get the summary of a specific Wikipedia page. Tries Simple English first, falls back to English.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "title": {
                         "type": "string",
-                        "description": "Title of the Wikipedia page to retrieve"
+                        "description": "Title of the Wikipedia page to get summary for"
+                    },
+                    "auto_suggest": {
+                        "type": "boolean",
+                        "description": "Whether to automatically suggest similar titles if exact match not found (default: true)",
+                        "default": True
+                    }
+                },
+                "required": ["title"]
+            }
+        ),
+        Tool(
+            name="page",
+            description="Get the full content of a specific Wikipedia page. Tries Simple English first, falls back to English.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "Title of the Wikipedia page to retrieve full content for"
                     },
                     "auto_suggest": {
                         "type": "boolean",
@@ -85,6 +104,8 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[types.T
 
     if name == "search":
         return await handle_search(arguments)
+    elif name == "summary":
+        return await handle_summary(arguments)
     elif name == "page":
         return await handle_page(arguments)
     else:
@@ -147,6 +168,97 @@ async def handle_search(arguments: dict[str, Any]) -> list[types.TextContent]:
 
     return results
 
+async def handle_summary(arguments: dict[str, Any]) -> list[types.TextContent]:
+    """Handle Wikipedia page summary requests."""
+    title = arguments.get("title")
+    auto_suggest = arguments.get("auto_suggest", True)
+
+    if not title:
+        raise ValueError("Title parameter is required")
+
+    results = []
+
+    # Try Simple English Wikipedia first
+    try:
+        wikipedia.set_lang("simple")
+
+        try:
+            page = wikipedia.page(title, auto_suggest=auto_suggest)
+
+            # Check if the page has reasonable content (not just a stub)
+            if len(page.content) > 500:  # Arbitrary threshold for "good quality"
+                # Metadata
+                results.append(types.TextContent(
+                    type="text",
+                    text=f"# Summary Metadata\n\n**Title:** {page.title}\n**Wikipedia Version:** Simple English\n**Language Code:** simple\n**URL:** {page.url}\n**Content Length:** {len(page.content)} characters"
+                ))
+                # Summary
+                results.append(types.TextContent(
+                    type="text",
+                    text=f"# Page Summary\n\n{page.summary}"
+                ))
+                return results
+        except wikipedia.exceptions.DisambiguationError as e:
+            # Handle disambiguation by showing options
+            # Metadata
+            results.append(types.TextContent(
+                type="text",
+                text=f"# Disambiguation Metadata\n\n**Wikipedia Version:** Simple English\n**Language Code:** simple\n**Requested Title:** {title}\n**Options Count:** {len(e.options[:10])}"
+            ))
+            # Disambiguation Options
+            results.append(types.TextContent(
+                type="text",
+                text=f"# Disambiguation Options\n\n**Did you mean:**\n" + "\n".join([f"- {option}" for option in e.options[:10]])
+            ))
+            return results
+        except wikipedia.exceptions.PageError:
+            # Page doesn't exist in Simple English, will try regular English
+            pass
+    except Exception as e:
+        logger.warning(f"Simple English lookup failed: {e}")
+
+    # Fallback to English Wikipedia
+    try:
+        wikipedia.set_lang("en")
+
+        try:
+            page = wikipedia.page(title, auto_suggest=auto_suggest)
+            # Metadata
+            results.append(types.TextContent(
+                type="text",
+                text=f"# Summary Metadata\n\n**Title:** {page.title}\n**Wikipedia Version:** English\n**Language Code:** en\n**URL:** {page.url}\n**Content Length:** {len(page.content)} characters\n**Note:** Simple English version not available"
+            ))
+            # Summary
+            results.append(types.TextContent(
+                type="text",
+                text=f"# Page Summary\n\n{page.summary}"
+            ))
+        except wikipedia.exceptions.DisambiguationError as e:
+            # Metadata
+            results.append(types.TextContent(
+                type="text",
+                text=f"# Disambiguation Metadata\n\n**Wikipedia Version:** English\n**Language Code:** en\n**Requested Title:** {title}\n**Options Count:** {len(e.options[:10])}\n**Note:** Simple English version not available"
+            ))
+            # Disambiguation Options
+            results.append(types.TextContent(
+                type="text",
+                text=f"# Disambiguation Options\n\n**Did you mean:**\n" + "\n".join([f"- {option}" for option in e.options[:10]])
+            ))
+        except wikipedia.exceptions.PageError:
+            results.append(types.TextContent(
+                type="text",
+                text=f"# Summary Not Found\n\n**Wikipedia Version:** None (not found)\n**Language Code:** N/A\n**Requested Title:** {title}\n**Error:** Page does not exist in Simple English or English Wikipedia"
+            ))
+
+    except Exception as e:
+        logger.error(f"Summary retrieval error: {e}")
+        results.append(types.TextContent(
+            type="text",
+            text=f"# Summary Error\n\n**Wikipedia Version:** Error\n**Language Code:** N/A\n**Requested Title:** {title}\n**Error:** {str(e)}"
+        ))
+
+    return results
+
 async def handle_page(arguments: dict[str, Any]) -> list[types.TextContent]:
     """Handle Wikipedia page content requests."""
     title = arguments.get("title")
@@ -170,11 +282,6 @@ async def handle_page(arguments: dict[str, Any]) -> list[types.TextContent]:
                 results.append(types.TextContent(
                     type="text",
                     text=f"# Page Metadata\n\n**Title:** {page.title}\n**Wikipedia Version:** Simple English\n**Language Code:** simple\n**URL:** {page.url}\n**Content Length:** {len(page.content)} characters"
-                ))
-                # Summary
-                results.append(types.TextContent(
-                    type="text",
-                    text=f"# Page Summary\n\n{page.summary}"
                 ))
                 # Full Content
                 results.append(types.TextContent(
@@ -211,11 +318,6 @@ async def handle_page(arguments: dict[str, Any]) -> list[types.TextContent]:
             results.append(types.TextContent(
                 type="text",
                 text=f"# Page Metadata\n\n**Title:** {page.title}\n**Wikipedia Version:** English\n**Language Code:** en\n**URL:** {page.url}\n**Content Length:** {len(page.content)} characters\n**Note:** Simple English version not available"
-            ))
-            # Summary
-            results.append(types.TextContent(
-                type="text",
-                text=f"# Page Summary\n\n{page.summary}"
             ))
             # Full Content
             results.append(types.TextContent(
