@@ -8,6 +8,7 @@ prioritizing Simple English Wikipedia with fallback to regular English.
 
 import asyncio
 import logging
+import os
 from typing import Any, Sequence
 import wikipedia
 
@@ -26,6 +27,11 @@ logger = logging.getLogger("wikipedia-mcp")
 
 # Initialize the MCP server
 server = Server("wikipedia-se")
+
+# Check environment variable for Wikipedia mode
+# Set WIKIPEDIA_MODE=full to use full Wikipedia only (skip Simple English)
+WIKIPEDIA_MODE = os.environ.get("WIKIPEDIA_MODE", "simple").lower()
+USE_SIMPLE_FIRST = WIKIPEDIA_MODE != "full"
 
 @server.list_tools()
 async def handle_list_tools() -> list[Tool]:
@@ -121,8 +127,9 @@ async def handle_search(arguments: dict[str, Any]) -> list[types.TextContent]:
 
     results = []
 
-    # Try Simple English Wikipedia first
-    try:
+    # Try Simple English Wikipedia first (unless WIKIPEDIA_MODE=full)
+    if USE_SIMPLE_FIRST:
+        try:
         wikipedia.set_lang("simple")
         search_results = wikipedia.search(query, results=limit)
 
@@ -165,6 +172,35 @@ async def handle_search(arguments: dict[str, Any]) -> list[types.TextContent]:
             type="text",
             text=f"# Search Error\n\n**Wikipedia Version:** Error\n**Query:** {query}\n**Language Code:** N/A\n**Error:** {str(e)}"
         ))
+    else:
+        # Direct English Wikipedia mode
+        try:
+            wikipedia.set_lang("en")
+            search_results = wikipedia.search(query, results=limit)
+
+            if search_results:
+                # Metadata
+                results.append(types.TextContent(
+                    type="text",
+                    text=f"# Search Metadata\n\n**Wikipedia Version:** English\n**Query:** {query}\n**Results Count:** {len(search_results)}\n**Language Code:** en\n**Note:** Simple English results not available"
+                ))
+                # Search Results
+                results.append(types.TextContent(
+                    type="text",
+                    text=f"# Search Results\n\n" + "\n".join([f"- {result}" for result in search_results])
+                ))
+            else:
+                results.append(types.TextContent(
+                    type="text",
+                    text=f"# Search Metadata\n\n**Wikipedia Version:** None (not found)\n**Query:** {query}\n**Results Count:** 0\n**Language Code:** N/A\n**Error:** No results found in Simple English or English Wikipedia"
+                ))
+
+        except Exception as e:
+            logger.error(f"Search error: {e}")
+            results.append(types.TextContent(
+                type="text",
+                text=f"# Search Error\n\n**Wikipedia Version:** Error\n**Query:** {query}\n**Language Code:** N/A\n**Error:** {str(e)}"
+            ))
 
     return results
 
@@ -178,8 +214,9 @@ async def handle_summary(arguments: dict[str, Any]) -> list[types.TextContent]:
 
     results = []
 
-    # Try Simple English Wikipedia first
-    try:
+    # Try Simple English Wikipedia first (unless WIKIPEDIA_MODE=full)
+    if USE_SIMPLE_FIRST:
+        try:
         wikipedia.set_lang("simple")
 
         try:
@@ -217,8 +254,9 @@ async def handle_summary(arguments: dict[str, Any]) -> list[types.TextContent]:
     except Exception as e:
         logger.warning(f"Simple English lookup failed: {e}")
 
-    # Fallback to English Wikipedia
-    try:
+    # Fallback to English Wikipedia (or direct if WIKIPEDIA_MODE=full)
+    if not results or not USE_SIMPLE_FIRST:
+        try:
         wikipedia.set_lang("en")
 
         try:
@@ -250,12 +288,12 @@ async def handle_summary(arguments: dict[str, Any]) -> list[types.TextContent]:
                 text=f"# Summary Not Found\n\n**Wikipedia Version:** None (not found)\n**Language Code:** N/A\n**Requested Title:** {title}\n**Error:** Page does not exist in Simple English or English Wikipedia"
             ))
 
-    except Exception as e:
-        logger.error(f"Summary retrieval error: {e}")
-        results.append(types.TextContent(
-            type="text",
-            text=f"# Summary Error\n\n**Wikipedia Version:** Error\n**Language Code:** N/A\n**Requested Title:** {title}\n**Error:** {str(e)}"
-        ))
+        except Exception as e:
+            logger.error(f"Summary retrieval error: {e}")
+            results.append(types.TextContent(
+                type="text",
+                text=f"# Summary Error\n\n**Wikipedia Version:** Error\n**Language Code:** N/A\n**Requested Title:** {title}\n**Error:** {str(e)}"
+            ))
 
     return results
 
@@ -269,8 +307,9 @@ async def handle_content(arguments: dict[str, Any]) -> list[types.TextContent]:
 
     results = []
 
-    # Try Simple English Wikipedia first
-    try:
+    # Try Simple English Wikipedia first (unless WIKIPEDIA_MODE=full)
+    if USE_SIMPLE_FIRST:
+        try:
         wikipedia.set_lang("simple")
 
         try:
@@ -308,8 +347,9 @@ async def handle_content(arguments: dict[str, Any]) -> list[types.TextContent]:
     except Exception as e:
         logger.warning(f"Simple English lookup failed: {e}")
 
-    # Fallback to English Wikipedia
-    try:
+    # Fallback to English Wikipedia (or direct if WIKIPEDIA_MODE=full)
+    if not results or not USE_SIMPLE_FIRST:
+        try:
         wikipedia.set_lang("en")
 
         try:
@@ -341,12 +381,12 @@ async def handle_content(arguments: dict[str, Any]) -> list[types.TextContent]:
                 text=f"# Content Not Found\n\n**Wikipedia Version:** None (not found)\n**Language Code:** N/A\n**Requested Title:** {title}\n**Error:** Page does not exist in Simple English or English Wikipedia"
             ))
 
-    except Exception as e:
-        logger.error(f"Content retrieval error: {e}")
-        results.append(types.TextContent(
-            type="text",
-            text=f"# Content Error\n\n**Wikipedia Version:** Error\n**Language Code:** N/A\n**Requested Title:** {title}\n**Error:** {str(e)}"
-        ))
+        except Exception as e:
+            logger.error(f"Content retrieval error: {e}")
+            results.append(types.TextContent(
+                type="text",
+                text=f"# Content Error\n\n**Wikipedia Version:** Error\n**Language Code:** N/A\n**Requested Title:** {title}\n**Error:** {str(e)}"
+            ))
 
     return results
 

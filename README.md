@@ -85,6 +85,44 @@ Or if using a local installation:
 }
 ```
 
+To use full English Wikipedia exclusively (bypassing Simple English):
+```json
+{
+  "mcpServers": {
+    "wikipedia-se": {
+      "command": "uvx",
+      "args": ["git+https://github.com/bhubbb/mcp-se-wikipedia"],
+      "env": {
+        "WIKIPEDIA_MODE": "full"
+      }
+    }
+  }
+}
+```
+
+### Configuration
+
+The server behavior can be configured using environment variables:
+
+#### `WIKIPEDIA_MODE`
+Controls which Wikipedia version to use:
+- **`simple`** (default): Prioritizes Simple English Wikipedia with automatic fallback to regular English
+- **`full`**: Uses only regular English Wikipedia, bypassing Simple English entirely
+
+**Example usage:**
+```bash
+# Default mode (Simple English first)
+uv run python main.py
+
+# Full Wikipedia mode only
+WIKIPEDIA_MODE=full uv run python main.py
+```
+
+This is useful when:
+- You need more detailed technical content
+- You want consistent results from regular Wikipedia
+- You're working with topics that have better coverage in full English Wikipedia
+
 ## Available Tools
 
 ### `search`
@@ -157,12 +195,13 @@ Get the full content of a Wikipedia page.
 
 ### Language Priority System
 
-1. **Simple English First**: All requests start with Simple English Wikipedia
+1. **Simple English First** (default mode): All requests start with Simple English Wikipedia
 2. **Quality Check**: For content/summary requests, checks if content is substantial (>500 characters)
 3. **Automatic Fallback**: Switches to English Wikipedia if:
    - Page doesn't exist in Simple English
    - Content is too brief (likely a stub)
    - Search returns no results
+4. **Full Wikipedia Mode**: When `WIKIPEDIA_MODE=full` is set, bypasses Simple English and uses regular English Wikipedia directly
 
 ### Structured Output Format
 
