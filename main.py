@@ -281,7 +281,7 @@ async def handle_summary(arguments: dict[str, Any]) -> list[types.TextContent]:
                     )
                 )
                 return results
-            except wikipedia.exceptions.PageError as e:
+            except wikipedia.exceptions.PageError:
                 # If auto_suggest is False, try with True before giving up
                 if not auto_suggest:
                     try:
@@ -300,7 +300,7 @@ async def handle_summary(arguments: dict[str, Any]) -> list[types.TextContent]:
                                 )
                             )
                             return results
-                    except:
+                    except Exception:
                         pass
                 # Page doesn't exist in Simple English, will try regular English
                 pass
@@ -343,7 +343,7 @@ async def handle_summary(arguments: dict[str, Any]) -> list[types.TextContent]:
                         + "\n".join([f"- {option}" for option in e.options[:10]]),
                     )
                 )
-            except wikipedia.exceptions.PageError as e:
+            except wikipedia.exceptions.PageError:
                 # If auto_suggest is False, try with True before giving up
                 if not auto_suggest:
                     try:
@@ -360,7 +360,7 @@ async def handle_summary(arguments: dict[str, Any]) -> list[types.TextContent]:
                             )
                         )
                         return results
-                    except:
+                    except Exception:
                         pass
                 results.append(
                     types.TextContent(
@@ -433,7 +433,7 @@ async def handle_content(arguments: dict[str, Any]) -> list[types.TextContent]:
                     )
                 )
                 return results
-            except wikipedia.exceptions.PageError as e:
+            except wikipedia.exceptions.PageError:
                 # If auto_suggest is False, try with True before giving up
                 if not auto_suggest:
                     try:
@@ -452,7 +452,7 @@ async def handle_content(arguments: dict[str, Any]) -> list[types.TextContent]:
                                 )
                             )
                             return results
-                    except:
+                    except Exception:
                         pass
                 # Page doesn't exist in Simple English, will try regular English
                 pass
@@ -495,7 +495,7 @@ async def handle_content(arguments: dict[str, Any]) -> list[types.TextContent]:
                         + "\n".join([f"- {option}" for option in e.options[:10]]),
                     )
                 )
-            except wikipedia.exceptions.PageError as e:
+            except wikipedia.exceptions.PageError:
                 # If auto_suggest is False, try with True before giving up
                 if not auto_suggest:
                     try:
@@ -512,7 +512,7 @@ async def handle_content(arguments: dict[str, Any]) -> list[types.TextContent]:
                             )
                         )
                         return results
-                    except:
+                    except Exception:
                         pass
                 results.append(
                     types.TextContent(
