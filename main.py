@@ -70,8 +70,8 @@ async def handle_list_tools() -> list[Tool]:
                     },
                     "auto_suggest": {
                         "type": "boolean",
-                        "description": "Whether to automatically suggest similar titles if exact match not found (default: true)",
-                        "default": True,
+                        "description": "Whether to automatically suggest similar titles if exact match not found (default: false)",
+                        "default": False,
                     },
                 },
                 "required": ["title"],
@@ -89,8 +89,8 @@ async def handle_list_tools() -> list[Tool]:
                     },
                     "auto_suggest": {
                         "type": "boolean",
-                        "description": "Whether to automatically suggest similar titles if exact match not found (default: true)",
-                        "default": True,
+                        "description": "Whether to automatically suggest similar titles if exact match not found (default: false)",
+                        "default": False,
                     },
                 },
                 "required": ["title"],
@@ -232,7 +232,7 @@ async def handle_search(arguments: dict[str, Any]) -> list[types.TextContent]:
 async def handle_summary(arguments: dict[str, Any]) -> list[types.TextContent]:
     """Handle Wikipedia page summary requests."""
     title = arguments.get("title")
-    auto_suggest = arguments.get("auto_suggest", True)
+    auto_suggest = arguments.get("auto_suggest", False)
 
     if not title:
         raise ValueError("Title parameter is required")
@@ -281,7 +281,27 @@ async def handle_summary(arguments: dict[str, Any]) -> list[types.TextContent]:
                     )
                 )
                 return results
-            except wikipedia.exceptions.PageError:
+            except wikipedia.exceptions.PageError as e:
+                # If auto_suggest is False, try with True before giving up
+                if not auto_suggest:
+                    try:
+                        page = wikipedia.page(title, auto_suggest=True)
+                        if len(page.content) > 500:
+                            results.append(
+                                types.TextContent(
+                                    type="text",
+                                    text=f"# Summary Metadata\n\n**Title:** {page.title}\n**Wikipedia Version:** Simple English\n**Language Code:** simple\n**URL:** {page.url}\n**Content Length:** {len(page.content)} characters\n**Note:** Auto-suggested from '{title}'",
+                                )
+                            )
+                            results.append(
+                                types.TextContent(
+                                    type="text",
+                                    text=f"# Page Summary\n\n{page.summary}",
+                                )
+                            )
+                            return results
+                    except:
+                        pass
                 # Page doesn't exist in Simple English, will try regular English
                 pass
         except Exception as e:
@@ -323,7 +343,25 @@ async def handle_summary(arguments: dict[str, Any]) -> list[types.TextContent]:
                         + "\n".join([f"- {option}" for option in e.options[:10]]),
                     )
                 )
-            except wikipedia.exceptions.PageError:
+            except wikipedia.exceptions.PageError as e:
+                # If auto_suggest is False, try with True before giving up
+                if not auto_suggest:
+                    try:
+                        page = wikipedia.page(title, auto_suggest=True)
+                        results.append(
+                            types.TextContent(
+                                type="text",
+                                text=f"# Summary Metadata\n\n**Title:** {page.title}\n**Wikipedia Version:** English\n**Language Code:** en\n**URL:** {page.url}\n**Content Length:** {len(page.content)} characters\n**Note:** Auto-suggested from '{title}'",
+                            )
+                        )
+                        results.append(
+                            types.TextContent(
+                                type="text", text=f"# Page Summary\n\n{page.summary}"
+                            )
+                        )
+                        return results
+                    except:
+                        pass
                 results.append(
                     types.TextContent(
                         type="text",
@@ -346,7 +384,7 @@ async def handle_summary(arguments: dict[str, Any]) -> list[types.TextContent]:
 async def handle_content(arguments: dict[str, Any]) -> list[types.TextContent]:
     """Handle Wikipedia page content requests."""
     title = arguments.get("title")
-    auto_suggest = arguments.get("auto_suggest", True)
+    auto_suggest = arguments.get("auto_suggest", False)
 
     if not title:
         raise ValueError("Title parameter is required")
@@ -395,7 +433,27 @@ async def handle_content(arguments: dict[str, Any]) -> list[types.TextContent]:
                     )
                 )
                 return results
-            except wikipedia.exceptions.PageError:
+            except wikipedia.exceptions.PageError as e:
+                # If auto_suggest is False, try with True before giving up
+                if not auto_suggest:
+                    try:
+                        page = wikipedia.page(title, auto_suggest=True)
+                        if len(page.content) > 500:
+                            results.append(
+                                types.TextContent(
+                                    type="text",
+                                    text=f"# Content Metadata\n\n**Title:** {page.title}\n**Wikipedia Version:** Simple English\n**Language Code:** simple\n**URL:** {page.url}\n**Content Length:** {len(page.content)} characters\n**Note:** Auto-suggested from '{title}'",
+                                )
+                            )
+                            results.append(
+                                types.TextContent(
+                                    type="text",
+                                    text=f"# Page Content\n\n{page.content}",
+                                )
+                            )
+                            return results
+                    except:
+                        pass
                 # Page doesn't exist in Simple English, will try regular English
                 pass
         except Exception as e:
@@ -437,7 +495,25 @@ async def handle_content(arguments: dict[str, Any]) -> list[types.TextContent]:
                         + "\n".join([f"- {option}" for option in e.options[:10]]),
                     )
                 )
-            except wikipedia.exceptions.PageError:
+            except wikipedia.exceptions.PageError as e:
+                # If auto_suggest is False, try with True before giving up
+                if not auto_suggest:
+                    try:
+                        page = wikipedia.page(title, auto_suggest=True)
+                        results.append(
+                            types.TextContent(
+                                type="text",
+                                text=f"# Content Metadata\n\n**Title:** {page.title}\n**Wikipedia Version:** English\n**Language Code:** en\n**URL:** {page.url}\n**Content Length:** {len(page.content)} characters\n**Note:** Auto-suggested from '{title}'",
+                            )
+                        )
+                        results.append(
+                            types.TextContent(
+                                type="text", text=f"# Page Content\n\n{page.content}"
+                            )
+                        )
+                        return results
+                    except:
+                        pass
                 results.append(
                     types.TextContent(
                         type="text",
